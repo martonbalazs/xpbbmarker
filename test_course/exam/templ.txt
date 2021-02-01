@@ -1,0 +1,11 @@
+Prb:	1
+Tot:	10
+Mark:
+
+Prb:	2a	2b
+Tot:	15	15
+Mark:	
+
+Prb:	3a	3b	3c	3d
+Tot:	15	15	10	20
+Mark:

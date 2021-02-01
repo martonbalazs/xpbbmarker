@@ -1,0 +1,71 @@
+#!/bin/bash
+# Joins the textfiles created by xpbbhwmarker into one .csv file.
+# Use it from an "exam" or "hw[n]" directory as xphwexjoin
+# or xphwexjoin > [filename].csv
+# Looks at the very last entry of the text files.
+# Checks student numbers from the names of the feedback files.
+# Output format: student number;;exam;hw1;hw2;...;hw[n]
+
+# Collect HW folder names, need to sort them which is not so easy.
+tosort=""
+for d in $(find ../ -maxdepth 1 -name "hw*" -type d)
+do
+
+# Get rid of ../
+ hwname=${d##*/}
+
+# Extract the numbers only
+ numhw=${hwname//[^0-9]/}
+
+# Append numbers in front
+ tosort+=(${numhw}_${hwname})
+done
+
+# Now the actual sort -n. Needs newlines, etc...
+IFS=$'\n' sorted=($(sort -n<<<"${tosort[*]}"))
+unset IFS
+# echo "${sorted[@]}"
+
+# Remove until first _, so hws finally has the HW dir names in numeric order
+hws=""
+for str in ${sorted[@]}
+do
+ hws+=(${str#*_})
+done
+# echo "${hws[@]}"
+
+# Create header line first
+printf "Stud.no.;;exam"
+for d in ${hws[@]}
+do
+ hwname=${d##*/}
+ printf ";$hwname"
+done
+printf "\n"
+
+# Now for each feedback text file in current dir:
+for i in feedback*.txt
+do
+ c=${i##feedback_}
+ candno=${c%.txt}
+
+# Student number first, then exam results.
+ printf "${candno};;"
+ if [[ -f ../exam/feedback_$candno.txt ]]
+ then
+
+# Empty lines at the end of the file are a pain
+  printf "$(tr -d '\n' < ../exam/feedback_$candno.txt | awk 'END{print($NF)}')"
+ fi
+
+# Next the HW results, each of them
+ for d in ${hws[@]}
+ do
+  printf ";"
+  if [[ -f ../$d/feedback_$candno.txt ]]
+  then
+   printf "$(tr -d '\n' < ../$d/feedback_$candno.txt | awk 'END{print($NF)}')"
+  fi
+ done
+ printf "\n"
+done

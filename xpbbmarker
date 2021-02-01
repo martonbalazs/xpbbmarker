@@ -1,0 +1,109 @@
+#!/bin/bash
+# Marker script, uses Vim, Xournalpp and Awk.
+# Needs ONE template file called templ*.txt of the form
+# Prb: 1a	2a
+# Tot:	10	15
+# Mark:
+# and you fill in the "Mark:" line (in fact the script only needs this line).
+# Students' scripts need to be in subfolders named after student numbers.
+
+# One might want to edit the xls file from Blackboard at the same time.
+libreoffice >/dev/null 2>&1 *.xls* &
+
+firstround="y"
+
+for d in */ ; do
+ elej=${d%/*}
+ echo "$d	$elej"
+
+# Skip if submission is marked already
+ if [ ! -f "feedback_$elej.txt" ]
+ then
+
+# Can quit if not the first round.
+  if [[ $firstround != "y" ]]
+  then
+   read -n 1 -s -p "Quit [q] or do the next one [enter]?" ki
+   if [ "$ki" == "q" ]
+   then
+    exit 0
+   fi
+  fi
+  firstround="n"
+
+# Prepare for multiple files in a folder, copy and open each in Xournalpp
+  c=""
+  for j in $d/*.pdf
+  do
+   cp $j feedback_${elej}_${c}annotate.pdf
+   xournalpp >/dev/null 2>&1 feedback_${elej}_${c}annotate.pdf &
+   if [[ -z "$c" ]]
+   then
+    c="1"
+   else
+    c=$((c+1))
+   fi
+  done
+
+# Prepare text file for marking from template. Make sure there's only one templ*.txt file.
+  cp templ*.txt rawfeedback_$elej.txt 
+  vim rawfeedback_$elej.txt
+
+# Process text file. The relevant info is of the form of any number of lines Mark:[tab][first mark][tab][second mark] etc
+# Notice: separator is [tab] and awk is ok with that by default
+  awk ' BEGIN { marksno=0 }
+  {
+   if ($1 != "Mark:") {
+    print($0);
+   }
+   else{
+    print($0);
+  
+  # Last entry is added straight away
+    totline=$NF;
+  
+  # If more than one mark entry, print and also add up marks into next line
+    if (NF>2) {
+     print("");
+     for (i=2; i<NF; i+=1) {
+      printf($i"+");
+      totline=totline+$i;
+     }
+     print($NF" = "totline);
+     print("");
+    }
+  
+  # Register mark for total
+    marksno=marksno+1;
+    mark[marksno]=totline;
+   };
+  }
+  END {
+  
+  # Only if there were multiple mark lines
+   if (marksno>1) {
+    print("");
+    printf("Total: ");
+    totline=0;
+    for (j=1; j<marksno; j+=1) {
+     printf(mark[j]"+");
+     totline=totline+mark[j];
+    }
+    totline=totline+mark[marksno];
+    print(mark[marksno]" = "totline);
+   };
+  } ' rawfeedback_$elej.txt > feedback_$elej.txt
+
+# Show processed txt file for copy-paste
+  vim "+noremap q :q<CR>" "+noremap <Space> <PageDown>" -p -M -R feedback_$elej.txt
+
+# We have the processed file, the raw edit is not needed
+  rm rawfeedback_$elej.txt
+
+# Move Xournalpp files away
+  mv feedback_${elej}*.xopp $d/
+  mv feedback_${elej}*annotate.pdf $d/
+
+ fi
+done
+vim "+noremap q :q<CR>" "+noremap <Space> <PageDown>" -p -M -R feedback*.txt
