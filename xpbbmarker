@@ -35,8 +35,14 @@ for d in */ ; do
   c=""
   for j in $d/*.pdf
   do
-   cp $j feedback_${elej}_${c}annotate.pdf
-   xournalpp >/dev/null 2>&1 feedback_${elej}_${c}annotate.pdf &
+   if [[ -z "$c" ]]
+   then
+    cp $j feedback_${elej}.pdf
+    xournalpp >/dev/null 2>&1 feedback_${elej}.pdf &
+   else
+    cp $j feedback_${elej}_${c}.pdf
+    xournalpp >/dev/null 2>&1 feedback_${elej}_${c}.pdf &
+   fi
    if [[ -z "$c" ]]
    then
     c="1"
@@ -102,8 +108,13 @@ for d in */ ; do
 
 # Move Xournalpp files away
   mv feedback_${elej}*.xopp $d/
-  mv feedback_${elej}*annotate.pdf $d/
-
+  for k in feedback_${elej}*.pdf
+  do
+   if [[ $k != *"annotated.pdf" ]]
+   then
+    mv $k $d/
+   fi
+  done
  fi
 done
 vim "+noremap q :q<CR>" "+noremap <Space> <PageDown>" -p -M -R feedback*.txt
